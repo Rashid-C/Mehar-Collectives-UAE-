@@ -1,0 +1,50 @@
+import { SearchIcon } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../ui/select'
+import { getAllCategories } from '@/lib/actions/product.actions'
+import { getSetting } from '@/lib/actions/setting.actions'
+import { getTranslations } from 'next-intl/server'
+
+export default async function Search() {
+  const {
+    site: { name },
+  } = await getSetting()
+  const categories = await getAllCategories()
+  const t = await getTranslations()
+  return (
+    <form action='/search' method='GET' className='flex  items-stretch h-10 '>
+      <Select name='category'>
+        <SelectTrigger className='hidden md:flex w-auto h-full bg-gray-700 text-white border-none rounded-r-none rounded-l-md rtl:rounded-r-md rtl:rounded-l-none hover:bg-gray-600 transition-colors'>
+          <SelectValue placeholder={t('Header.All')} />
+        </SelectTrigger>
+        <SelectContent position='popper' className='bg-white text-gray-900 border border-gray-200'>
+          <SelectItem value='all' className='text-gray-900 hover:bg-gray-100 focus:bg-gray-100 focus:text-gray-900'>{t('Header.All')}</SelectItem>
+          {categories.map((category) => (
+            <SelectItem key={category} value={category} className='text-gray-900 hover:bg-gray-100 focus:bg-gray-100 focus:text-gray-900'>
+              {category}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Input
+        className='flex-1 rounded-none rounded-l-md md:rounded-none dark:border-gray-200 bg-gray-100 text-black text-base h-full'
+        placeholder={t('Header.Search Site', { name })}
+        name='q'
+        type='search'
+      />
+      <button
+        type='submit'
+        className='bg-primary text-primary-foreground text-black rounded-s-none rounded-e-md h-full px-3 py-2 '
+      >
+        <SearchIcon className='w-6 h-6' />
+      </button>
+    </form>
+  )
+}
