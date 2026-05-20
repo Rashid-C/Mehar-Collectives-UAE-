@@ -37,7 +37,7 @@ function CarouselImageUploader({
 
   const { startUpload } = useUploadThing('imageUploader', {
     onClientUploadComplete: (res) => {
-      setValue(`carousels.${index}.image`, res[0].ufsUrl)
+      setValue(`carousels.${index}.image`, res[0].url)
       toast({ description: 'Image uploaded successfully' })
       setUploading(false)
     },
