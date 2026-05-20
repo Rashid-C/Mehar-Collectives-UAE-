@@ -7,15 +7,31 @@ import Order from '@/lib/db/models/order.model'
 import Product from '@/lib/db/models/product.model'
 import mongoose from 'mongoose'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
-
 export async function POST(req: NextRequest) {
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY
+    const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+    const stripeSignature = req.headers.get('stripe-signature')
+
+    if (!stripeSecretKey || !stripeWebhookSecret) {
+        return new NextResponse('Stripe webhook is not configured', { status: 500 })
+    }
+    if (!stripeSignature) {
+        return new NextResponse('Missing stripe-signature header', { status: 400 })
+    }
+
+    const stripe = new Stripe(stripeSecretKey)
+    let event: Stripe.Event
+    try {
+        event = stripe.webhooks.constructEvent(
+            await req.text(),
+            stripeSignature,
+            stripeWebhookSecret
+        )
+    } catch {
+        return new NextResponse('Invalid Stripe webhook signature', { status: 400 })
+    }
+
     await connectToDatabase()
-    const event = await stripe.webhooks.constructEvent(
-        await req.text(),
-        req.headers.get('stripe-signature') as string,
-        process.env.STRIPE_WEBHOOK_SECRET as string
-    )
 
     if (event.type === 'charge.succeeded') {
         const charge = event.data.object
