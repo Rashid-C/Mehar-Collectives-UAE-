@@ -63,6 +63,12 @@ const orderSchema = new Schema<IOrder>(
     }
 )
 
+orderSchema.index({ user: 1 })
+orderSchema.index({ createdAt: -1 })
+orderSchema.index({ isPaid: 1 })
+orderSchema.index({ user: 1, createdAt: -1 })
+orderSchema.index({ isPaid: 1, createdAt: -1 })
+
 const Order =
     (models.Order as Model<IOrder>) || model<IOrder>('Order', orderSchema)
 

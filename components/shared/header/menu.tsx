@@ -1,4 +1,4 @@
-import { auth } from '@/auth'
+import { safeAuth } from '@/lib/safe-auth'
 import { getTranslations } from 'next-intl/server'
 import CartButton from './cart-button'
 import UserButton from './user-button'
@@ -24,7 +24,7 @@ import {
 import Link from 'next/link'
 
 const Menu = async ({ forAdmin = false }: { forAdmin?: boolean }) => {
-  const [t, session] = await Promise.all([getTranslations(), auth()])
+  const [t, session] = await Promise.all([getTranslations(), safeAuth()])
 
   const initial = session?.user?.name?.[0]?.toUpperCase() ?? '?'
 

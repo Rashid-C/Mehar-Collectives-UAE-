@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useForm, Resolver } from 'react-hook-form'
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -26,6 +26,65 @@ import { ProductInputSchema, ProductUpdateSchema } from '@/lib/validator'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toSlug } from '@/lib/utils'
 import { IProductInput } from '@/types'
+
+function TagInput({
+  values,
+  onChange,
+  placeholder,
+  showDot,
+}: {
+  values: string[]
+  onChange: (v: string[]) => void
+  placeholder: string
+  showDot?: boolean
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const add = useCallback(() => {
+    const val = inputRef.current?.value.trim()
+    if (!val || values.includes(val)) return
+    onChange([...values, val])
+    if (inputRef.current) inputRef.current.value = ''
+  }, [values, onChange])
+
+  return (
+    <div className='space-y-2'>
+      <div className='flex gap-2'>
+        <Input
+          ref={inputRef}
+          placeholder={placeholder}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add() } }}
+        />
+        <Button type='button' variant='outline' onClick={add}>Add</Button>
+      </div>
+      {values.length > 0 && (
+        <div className='flex flex-wrap gap-2'>
+          {values.map((v) => (
+            <span
+              key={v}
+              className='inline-flex items-center gap-1.5 px-3 py-1 rounded-full border bg-muted text-sm font-medium'
+            >
+              {showDot && (
+                <span
+                  className='w-3 h-3 rounded-full border border-muted-foreground/30 shrink-0'
+                  style={{ backgroundColor: v.toLowerCase() }}
+                />
+              )}
+              {v}
+              <button
+                type='button'
+                onClick={() => onChange(values.filter((x) => x !== v))}
+                className='ml-1 text-muted-foreground hover:text-destructive transition-colors leading-none'
+                aria-label={`Remove ${v}`}
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 const productDefaultValues: IProductInput =
   process.env.NODE_ENV === 'development'
@@ -629,6 +688,47 @@ const ProductForm = ({
             }}
           />
         </div>
+
+        {/* Colors */}
+        <FormField
+          control={form.control}
+          name='colors'
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Colors</FormLabel>
+              <FormDescription>Add available color options for this product.</FormDescription>
+              <FormControl>
+                <TagInput
+                  values={field.value ?? []}
+                  onChange={field.onChange}
+                  placeholder='e.g. Black, Gold, Space Grey'
+                  showDot
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Sizes */}
+        <FormField
+          control={form.control}
+          name='sizes'
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Sizes / Variants</FormLabel>
+              <FormDescription>Add size or storage options (e.g. S, M, L or 128GB, 256GB).</FormDescription>
+              <FormControl>
+                <TagInput
+                  values={field.value ?? []}
+                  onChange={field.onChange}
+                  placeholder='e.g. S, M, XL or 128GB, 256GB'
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div>
           <Button

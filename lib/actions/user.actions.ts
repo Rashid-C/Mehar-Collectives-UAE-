@@ -129,11 +129,10 @@ export async function getAllUsers({
   await connectToDatabase()
 
   const skipAmount = (Number(page) - 1) * limit
-  const users = await User.find()
-    .sort({ createdAt: 'desc' })
-    .skip(skipAmount)
-    .limit(limit)
-  const usersCount = await User.countDocuments()
+  const [users, usersCount] = await Promise.all([
+    User.find().sort({ createdAt: -1 }).skip(skipAmount).limit(limit).lean(),
+    User.countDocuments(),
+  ])
   return {
     data: JSON.parse(JSON.stringify(users)) as IUser[],
     totalPages: Math.ceil(usersCount / limit),

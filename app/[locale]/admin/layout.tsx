@@ -5,15 +5,13 @@ import Menu from '@/components/shared/header/menu'
 import { AdminNav } from './admin-nav'
 import { getSetting } from '@/lib/actions/setting.actions'
 import { requireAdmin } from '@/lib/auth-guard'
-import { auth } from '@/auth'
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  await requireAdmin()
-  const [{ site }, session] = await Promise.all([getSetting(), auth()])
+  const [session, { site }] = await Promise.all([requireAdmin(), getSetting()])
 
   const userName = session?.user?.name ?? ''
   const userEmail = session?.user?.email ?? ''

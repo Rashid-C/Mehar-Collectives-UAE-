@@ -108,17 +108,19 @@ export default async function SearchPage(props: {
 
   const params = { q, category, tag, price, rating, sort, page }
 
-  const categories = await getCategoriesWithImages()
-  const tags = await getAllTags()
-  const data = await getAllProducts({
-    category,
-    tag,
-    query: q,
-    price,
-    rating,
-    page: Number(page),
-    sort,
-  })
+  const [categories, tags, data] = await Promise.all([
+    getCategoriesWithImages(),
+    getAllTags(),
+    getAllProducts({
+      category,
+      tag,
+      query: q,
+      price,
+      rating,
+      page: Number(page),
+      sort,
+    }),
+  ])
   const t = await getTranslations()
   const hasFilters =
     (q !== 'all' && q !== '') ||

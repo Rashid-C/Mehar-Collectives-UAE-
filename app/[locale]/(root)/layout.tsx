@@ -5,7 +5,7 @@ import Footer from '@/components/shared/footer'
 import WhatsAppButton from '@/components/shared/whatsapp-button'
 import AiChatWidget from '@/components/shared/ai-chat-widget'
 import { getSetting } from '@/lib/actions/setting.actions'
-import { auth } from '@/auth'
+import { safeAuth } from '@/lib/safe-auth'
 import { redirect } from 'next/navigation'
 
 export default async function RootLayout({
@@ -13,7 +13,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  const [setting, session] = await Promise.all([getSetting(), auth()])
+  const [setting, session] = await Promise.all([getSetting(), safeAuth()])
 
   if (
     setting.common.isMaintenanceMode &&

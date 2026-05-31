@@ -12,6 +12,7 @@ import SelectVariant from '@/components/shared/product/select-variant'
 import ProductPrice from '@/components/shared/product/product-price'
 import ProductGallery from '@/components/shared/product/product-gallery'
 import AddToBrowsingHistory from '@/components/shared/product/add-to-browsing-history'
+import ProductWhatsAppButton from '@/components/shared/product/product-whatsapp-button'
 import { Separator } from '@/components/ui/separator'
 import BrowsingHistoryList from '@/components/shared/browsing-history-list'
 import RatingSummary from '@/components/shared/product/rating-summary'
@@ -60,14 +61,22 @@ export default async function ProductDetails(props: {
     <div>
       <AddToBrowsingHistory id={product._id.toString()} category={product.category} />
       <section>
-        <div className='grid grid-cols-1 md:grid-cols-5  '>
+        <div className='grid grid-cols-1 md:grid-cols-5'>
+
+          {/* ── Image column ── */}
           <div className='col-span-2'>
             <ProductGallery images={product.images} />
+
+            {/* WhatsApp button: mobile only, right below image */}
+            <div className='md:hidden px-2 pt-3 pb-1'>
+              <ProductWhatsAppButton productName={product.name} />
+            </div>
           </div>
 
+          {/* ── Info column ── */}
           <div className='flex w-full flex-col gap-2 md:p-5 col-span-2'>
             <div className='flex flex-col gap-3'>
-              <p className='p-medium-16 rounded-full bg-grey-500/10   text-grey-500'>
+              <p className='p-medium-16 rounded-full bg-grey-500/10 text-grey-500'>
                 {t('Product.Brand')} {product.brand} {product.category}
               </p>
               <h1 className='font-bold text-lg lg:text-xl'>{product.name}</h1>
@@ -107,9 +116,11 @@ export default async function ProductDetails(props: {
               </p>
             </div>
           </div>
+
+          {/* ── Buy-box Card (desktop) ── */}
           <div>
             <Card>
-              <CardContent className='p-4 flex flex-col  gap-4'>
+              <CardContent className='p-4 flex flex-col gap-4'>
                 <ProductPrice price={product.price} />
 
                 {product.countInStock > 0 && product.countInStock <= 3 && (
@@ -148,11 +159,18 @@ export default async function ProductDetails(props: {
                     />
                   </div>
                 )}
+
+                {/* WhatsApp button: desktop only, inside buy-box */}
+                <div className='hidden md:block'>
+                  <ProductWhatsAppButton productName={product.name} />
+                </div>
               </CardContent>
             </Card>
           </div>
+
         </div>
       </section>
+
       <section className='mt-10'>
         <h2 className='h2-bold mb-2' id='reviews'>
           {t('Product.Customer Reviews')}

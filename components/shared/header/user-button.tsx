@@ -1,4 +1,4 @@
-import { auth } from '@/auth'
+import { safeAuth } from '@/lib/safe-auth'
 
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
@@ -17,7 +17,7 @@ import Link from 'next/link'
 
 export default async function UserButton() {
     const t = await getTranslations()
-    const session = await auth()
+    const session = await safeAuth()
     return (
         <div className='flex gap-2 items-center'>
             <DropdownMenu>

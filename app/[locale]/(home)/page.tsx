@@ -14,20 +14,26 @@ import { getTranslations } from 'next-intl/server'
 
 export default async function HomePage() {
   const t = await getTranslations('Home')
-  const { carousels } = await getSetting()
-  const todaysDeals = await getProductsByTag({ tag: 'todays-deal' })
-  const bestSellingProducts = await getProductsByTag({ tag: 'best-seller' })
 
-  const categories = (await getCategoriesWithImages()).slice(0, 4)
-  const newArrivals = await getProductsForCard({
-    tag: 'new-arrival',
-  })
-  const featureds = await getProductsForCard({
-    tag: 'featured',
-  })
-  const bestSellers = await getProductsForCard({
-    tag: 'best-seller',
-  })
+  const [
+    { carousels },
+    todaysDeals,
+    bestSellingProducts,
+    categoriesAll,
+    newArrivals,
+    featureds,
+    bestSellers,
+  ] = await Promise.all([
+    getSetting(),
+    getProductsByTag({ tag: 'todays-deal' }),
+    getProductsByTag({ tag: 'best-seller' }),
+    getCategoriesWithImages(),
+    getProductsForCard({ tag: 'new-arrival' }),
+    getProductsForCard({ tag: 'featured' }),
+    getProductsForCard({ tag: 'best-seller' }),
+  ])
+
+  const categories = categoriesAll.slice(0, 4)
   const cards = [
     {
       title: t('Categories to explore'),

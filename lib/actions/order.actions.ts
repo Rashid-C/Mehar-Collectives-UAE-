@@ -216,12 +216,15 @@ export async function getAllOrders({
   limit = limit || pageSize
   await connectToDatabase()
   const skipAmount = (Number(page) - 1) * limit
-  const orders = await Order.find()
-    .populate('user', 'name')
-    .sort({ createdAt: 'desc' })
-    .skip(skipAmount)
-    .limit(limit)
-  const ordersCount = await Order.countDocuments()
+  const [orders, ordersCount] = await Promise.all([
+    Order.find()
+      .populate('user', 'name')
+      .sort({ createdAt: -1 })
+      .skip(skipAmount)
+      .limit(limit)
+      .lean(),
+    Order.countDocuments(),
+  ])
   return {
     data: JSON.parse(JSON.stringify(orders)) as IOrderList[],
     totalPages: Math.ceil(ordersCount / limit),
@@ -244,14 +247,15 @@ export async function getMyOrders({
     throw new Error('User is not authenticated')
   }
   const skipAmount = (Number(page) - 1) * limit
-  const orders = await Order.find({
-    user: session?.user?.id,
-  })
-    .sort({ createdAt: 'desc' })
-    .skip(skipAmount)
-    .limit(limit)
-  const ordersCount = await Order.countDocuments({ user: session?.user?.id })
-
+  const userFilter = { user: session.user.id }
+  const [orders, ordersCount] = await Promise.all([
+    Order.find(userFilter)
+      .sort({ createdAt: -1 })
+      .skip(skipAmount)
+      .limit(limit)
+      .lean(),
+    Order.countDocuments(userFilter),
+  ])
   return {
     data: JSON.parse(JSON.stringify(orders)),
     totalPages: Math.ceil(ordersCount / limit),
@@ -500,94 +504,54 @@ export async function getOrderSummary(date: DateRange) {
   await requireAdmin()
   await connectToDatabase()
 
-  const ordersCount = await Order.countDocuments({
-    createdAt: {
-      $gte: date.from,
-      $lte: date.to,
-    },
-  })
-  const productsCount = await Product.countDocuments({
-    createdAt: {
-      $gte: date.from,
-      $lte: date.to,
-    },
-  })
-  const usersCount = await User.countDocuments({
-    createdAt: {
-      $gte: date.from,
-      $lte: date.to,
-    },
-  })
-
-  const totalSalesResult = await Order.aggregate([
-    {
-      $match: {
-        isPaid: true,
-        createdAt: {
-          $gte: date.from,
-          $lte: date.to,
-        },
-      },
-    },
-    {
-      $group: {
-        _id: null,
-        sales: { $sum: '$totalPrice' },
-      },
-    },
-    { $project: { totalSales: { $ifNull: ['$sales', 0] } } },
-  ])
-  const totalSales = totalSalesResult[0] ? totalSalesResult[0].totalSales : 0
+  const dateFilter = { createdAt: { $gte: date.from, $lte: date.to } }
+  const paidDateFilter = { isPaid: true, ...dateFilter }
 
   const today = new Date()
-  const sixMonthEarlierDate = new Date(
-    today.getFullYear(),
-    today.getMonth() - 5,
-    1
-  )
-  const monthlySales = await Order.aggregate([
-    {
-      $match: {
-        isPaid: true,
-        createdAt: {
-          $gte: sixMonthEarlierDate,
-        },
-      },
-    },
-    {
-      $group: {
-        _id: { $dateToString: { format: '%Y-%m', date: '$createdAt' } },
-        totalSales: { $sum: '$totalPrice' },
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        label: '$_id',
-        value: '$totalSales',
-      },
-    },
-
-    { $sort: { label: -1 } },
-  ])
-  const topSalesCategories = await getTopSalesCategories(date)
-  const topSalesProducts = await getTopSalesProducts(date)
+  const sixMonthEarlierDate = new Date(today.getFullYear(), today.getMonth() - 5, 1)
 
   const {
     common: { pageSize },
   } = await getSetting()
-  const limit = pageSize
-  const latestOrders = await Order.find()
-    .populate('user', 'name')
-    .sort({ createdAt: 'desc' })
-    .limit(limit)
+
+  const [
+    ordersCount,
+    productsCount,
+    usersCount,
+    totalSalesResult,
+    monthlySales,
+    topSalesCategories,
+    topSalesProducts,
+    salesChartData,
+    latestOrders,
+  ] = await Promise.all([
+    Order.countDocuments(dateFilter),
+    Product.countDocuments(dateFilter),
+    User.countDocuments(dateFilter),
+    Order.aggregate([
+      { $match: paidDateFilter },
+      { $group: { _id: null, sales: { $sum: '$totalPrice' } } },
+      { $project: { totalSales: { $ifNull: ['$sales', 0] } } },
+    ]),
+    Order.aggregate([
+      { $match: { isPaid: true, createdAt: { $gte: sixMonthEarlierDate } } },
+      { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$createdAt' } }, totalSales: { $sum: '$totalPrice' } } },
+      { $project: { _id: 0, label: '$_id', value: '$totalSales' } },
+      { $sort: { label: -1 } },
+    ]),
+    getTopSalesCategories(date),
+    getTopSalesProducts(date),
+    getSalesChartData(date),
+    Order.find().populate('user', 'name').sort({ createdAt: -1 }).limit(pageSize).lean(),
+  ])
+
   return {
     ordersCount,
     productsCount,
     usersCount,
-    totalSales,
+    totalSales: totalSalesResult[0]?.totalSales ?? 0,
     monthlySales: JSON.parse(JSON.stringify(monthlySales)),
-    salesChartData: JSON.parse(JSON.stringify(await getSalesChartData(date))),
+    salesChartData: JSON.parse(JSON.stringify(salesChartData)),
     topSalesCategories: JSON.parse(JSON.stringify(topSalesCategories)),
     topSalesProducts: JSON.parse(JSON.stringify(topSalesProducts)),
     latestOrders: JSON.parse(JSON.stringify(latestOrders)) as IOrderList[],
@@ -669,8 +633,6 @@ async function getTopSalesProducts(date: DateRange) {
       },
     },
     { $limit: 6 },
-
-    // Step 3: Replace productInfo array with product name and format the output
     {
       $project: {
         _id: 0,
@@ -680,9 +642,6 @@ async function getTopSalesProducts(date: DateRange) {
         value: '$totalSales',
       },
     },
-
-    // Step 4: Sort by totalSales in descending order
-    { $sort: { _id: 1 } },
   ])
 
   return result

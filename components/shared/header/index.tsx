@@ -9,9 +9,11 @@ import { getSetting } from '@/lib/actions/setting.actions'
 import { getTranslations } from 'next-intl/server'
 
 export default async function Header() {
-  const categories = await getAllCategories()
-  const { site } = await getSetting()
-  const t = await getTranslations()
+  const [categories, { site }, t] = await Promise.all([
+    getAllCategories(),
+    getSetting(),
+    getTranslations(),
+  ])
 
   return (
     <header className='bg-black text-white sticky top-0 z-50 shadow-lg'>

@@ -2,6 +2,7 @@
 
 const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
+import { unstable_cache, revalidateTag } from 'next/cache'
 import { connectToDatabase } from '@/lib/db'
 import Product, { IProduct } from '@/lib/db/models/product.model'
 import { revalidatePath } from 'next/cache'
@@ -11,6 +12,12 @@ import { IProductInput } from '@/types'
 import { z } from 'zod'
 import { getSetting } from './setting.actions'
 import { requireAdmin } from '../auth-guard'
+import {
+  getPublishedFallbackProducts,
+  logDevDbFallback,
+  shouldUseDevDbFallback,
+  withFallbackProductIds,
+} from '@/lib/db/dev-fallback'
 
 // CREATE
 export async function createProduct(data: IProductInput) {
@@ -20,6 +27,8 @@ export async function createProduct(data: IProductInput) {
     await connectToDatabase()
     await Product.create(product)
     revalidatePath('/admin/products')
+    revalidateTag('categories')
+    revalidateTag('tags')
     return {
       success: true,
       message: 'Product created successfully',
@@ -39,6 +48,8 @@ export async function updateProduct(data: z.infer<typeof ProductUpdateSchema>) {
     revalidatePath('/admin/products')
     revalidatePath(`/product/${product.slug}`)
     revalidatePath('/search')
+    revalidateTag('categories')
+    revalidateTag('tags')
     return {
       success: true,
       message: 'Product updated successfully',
@@ -55,6 +66,8 @@ export async function deleteProduct(id: string) {
     const res = await Product.findByIdAndDelete(id)
     if (!res) throw new Error('Product not found')
     revalidatePath('/admin/products')
+    revalidateTag('categories')
+    revalidateTag('tags')
     return {
       success: true,
       message: 'Product deleted successfully',
@@ -109,23 +122,21 @@ export async function getAllProductsForAdmin({
           : sort === 'avg-customer-review'
             ? { avgRating: -1 }
             : { _id: -1 }
-  const products = await Product.find({
-    ...queryFilter,
-  })
-    .sort(order)
-    .skip(limit * (Number(page) - 1))
-    .limit(limit)
-    .lean()
-
-  const countProducts = await Product.countDocuments({
-    ...queryFilter,
-  })
+  const skip = limit * (Number(page) - 1)
+  const [products, countProducts] = await Promise.all([
+    Product.find({ ...queryFilter })
+      .sort(order)
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Product.countDocuments({ ...queryFilter }),
+  ])
   return {
     products: JSON.parse(JSON.stringify(products)) as IProduct[],
     totalPages: Math.ceil(countProducts / limit),
     totalProducts: countProducts,
-    from: limit * (Number(page) - 1) + 1,
-    to: limit * (Number(page) - 1) + products.length,
+    from: skip + 1,
+    to: skip + products.length,
   }
 }
 
@@ -162,13 +173,23 @@ export async function renameCategory(oldName: string, newName: string) {
   return { modifiedCount: result.modifiedCount }
 }
 
-export async function getAllCategories() {
-  await connectToDatabase()
-  const categories = await Product.find({ isPublished: true }).distinct(
-    'category'
-  )
-  return categories
-}
+export const getAllCategories = unstable_cache(
+  async function () {
+    try {
+      await connectToDatabase()
+      const categories = await Product.find({ isPublished: true }).distinct('category')
+      return categories
+    } catch (error) {
+      if (!shouldUseDevDbFallback(error)) throw error
+      logDevDbFallback('getAllCategories', error)
+      return Array.from(
+        new Set(getPublishedFallbackProducts().map((product) => product.category))
+      ).sort()
+    }
+  },
+  ['all-categories'],
+  { revalidate: 3600, tags: ['categories'] }
+)
 
 export async function getAllCategoriesForAdmin() {
   await requireAdmin()
@@ -194,20 +215,36 @@ export async function getAllBrandsForAdmin() {
   return brands as string[]
 }
 
-export async function getCategoriesWithImages() {
-  await connectToDatabase()
-  const categories = await Product.aggregate([
-    { $match: { isPublished: true } },
-    {
-      $group: {
-        _id: '$category',
-        image: { $first: { $arrayElemAt: ['$images', 0] } },
-      },
-    },
-    { $project: { _id: 0, name: '$_id', image: 1 } },
-  ])
-  return categories as { name: string; image: string }[]
-}
+export const getCategoriesWithImages = unstable_cache(
+  async function () {
+    try {
+      await connectToDatabase()
+      const categories = await Product.aggregate([
+        { $match: { isPublished: true } },
+        {
+          $group: {
+            _id: '$category',
+            image: { $first: { $arrayElemAt: ['$images', 0] } },
+          },
+        },
+        { $project: { _id: 0, name: '$_id', image: 1 } },
+      ])
+      return categories as { name: string; image: string }[]
+    } catch (error) {
+      if (!shouldUseDevDbFallback(error)) throw error
+      logDevDbFallback('getCategoriesWithImages', error)
+      const categories = new Map<string, string>()
+      getPublishedFallbackProducts().forEach((product) => {
+        if (!categories.has(product.category)) {
+          categories.set(product.category, product.images[0])
+        }
+      })
+      return Array.from(categories, ([name, image]) => ({ name, image }))
+    }
+  },
+  ['categories-with-images'],
+  { revalidate: 3600, tags: ['categories'] }
+)
 export async function getProductsForCard({
   tag,
   limit = 4,
@@ -215,22 +252,34 @@ export async function getProductsForCard({
   tag: string
   limit?: number
 }) {
-  await connectToDatabase()
-  const products = await Product.find(
-    { tags: { $in: [tag] }, isPublished: true },
-    {
-      name: 1,
-      href: { $concat: ['/product/', '$slug'] },
-      image: { $arrayElemAt: ['$images', 0] },
-    }
-  )
-    .sort({ createdAt: 'desc' })
-    .limit(limit)
-  return JSON.parse(JSON.stringify(products)) as {
-    name: string
-    href: string
-    image: string
-  }[]
+  try {
+    await connectToDatabase()
+    const products = await Product.aggregate([
+      { $match: { tags: { $in: [tag] }, isPublished: true } },
+      { $sort: { createdAt: -1 } },
+      { $limit: limit },
+      {
+        $project: {
+          _id: 0,
+          name: 1,
+          href: { $concat: ['/product/', '$slug'] },
+          image: { $arrayElemAt: ['$images', 0] },
+        },
+      },
+    ])
+    return products as { name: string; href: string; image: string }[]
+  } catch (error) {
+    if (!shouldUseDevDbFallback(error)) throw error
+    logDevDbFallback(`getProductsForCard:${tag}`, error)
+    return getPublishedFallbackProducts()
+      .filter((product) => product.tags.includes(tag))
+      .slice(0, limit)
+      .map((product) => ({
+        name: product.name,
+        href: `/product/${product.slug}`,
+        image: product.images[0],
+      }))
+  }
 }
 // GET PRODUCTS BY TAG
 export async function getProductsByTag({
@@ -240,14 +289,24 @@ export async function getProductsByTag({
   tag: string
   limit?: number
 }) {
-  await connectToDatabase()
-  const products = await Product.find({
-    tags: { $in: [tag] },
-    isPublished: true,
-  })
-    .sort({ createdAt: 'desc' })
-    .limit(limit)
-  return JSON.parse(JSON.stringify(products)) as IProduct[]
+  try {
+    await connectToDatabase()
+    const products = await Product.find({
+      tags: { $in: [tag] },
+      isPublished: true,
+    })
+      .sort({ createdAt: 'desc' })
+      .limit(limit)
+    return JSON.parse(JSON.stringify(products)) as IProduct[]
+  } catch (error) {
+    if (!shouldUseDevDbFallback(error)) throw error
+    logDevDbFallback(`getProductsByTag:${tag}`, error)
+    return withFallbackProductIds(
+      getPublishedFallbackProducts()
+        .filter((product) => product.tags.includes(tag))
+        .slice(0, limit)
+    ) as unknown as IProduct[]
+  }
 }
 
 // GET ONE PRODUCT BY SLUG
@@ -280,11 +339,10 @@ export async function getRelatedProductsByCategory({
     category,
     _id: { $ne: productId },
   }
-  const products = await Product.find(conditions)
-    .sort({ numSales: 'desc' })
-    .skip(skipAmount)
-    .limit(limit)
-  const productsCount = await Product.countDocuments(conditions)
+  const [products, productsCount] = await Promise.all([
+    Product.find(conditions).sort({ numSales: 'desc' }).skip(skipAmount).limit(limit).lean(),
+    Product.countDocuments(conditions),
+  ])
   return {
     data: JSON.parse(JSON.stringify(products)) as IProduct[],
     totalPages: Math.ceil(productsCount / limit),
@@ -351,49 +409,54 @@ export async function getAllProducts({
             ? { avgRating: -1 }
             : { _id: -1 }
   const isPublished = { isPublished: true }
-  const products = await Product.find({
+  const filter = {
     ...isPublished,
     ...queryFilter,
     ...tagFilter,
     ...categoryFilter,
     ...priceFilter,
     ...ratingFilter,
-  })
-    .sort(order)
-    .skip(limit * (Number(page) - 1))
-    .limit(limit)
-    .lean()
-
-  const countProducts = await Product.countDocuments({
+  }
+  const countFilter = {
     ...queryFilter,
     ...tagFilter,
     ...categoryFilter,
     ...priceFilter,
     ...ratingFilter,
-  })
+  }
+  const skip = limit * (Number(page) - 1)
+  const [products, countProducts] = await Promise.all([
+    Product.find(filter).sort(order).skip(skip).limit(limit).lean(),
+    Product.countDocuments(countFilter),
+  ])
   return {
     products: JSON.parse(JSON.stringify(products)) as IProduct[],
     totalPages: Math.ceil(countProducts / limit),
     totalProducts: countProducts,
-    from: limit * (Number(page) - 1) + 1,
-    to: limit * (Number(page) - 1) + products.length,
+    from: skip + 1,
+    to: skip + products.length,
   }
 }
 
-export async function getAllTags() {
-  const tags = await Product.aggregate([
-    { $unwind: '$tags' },
-    { $group: { _id: null, uniqueTags: { $addToSet: '$tags' } } },
-    { $project: { _id: 0, uniqueTags: 1 } },
-  ])
-  return (
-    (tags[0]?.uniqueTags
-      .sort((a: string, b: string) => a.localeCompare(b))
-      .map((x: string) =>
-        x
-          .split('-')
-          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ')
-      ) as string[]) || []
-  )
-}
+export const getAllTags = unstable_cache(
+  async function () {
+    await connectToDatabase()
+    const tags = await Product.aggregate([
+      { $unwind: '$tags' },
+      { $group: { _id: null, uniqueTags: { $addToSet: '$tags' } } },
+      { $project: { _id: 0, uniqueTags: 1 } },
+    ])
+    return (
+      (tags[0]?.uniqueTags
+        .sort((a: string, b: string) => a.localeCompare(b))
+        .map((x: string) =>
+          x
+            .split('-')
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ')
+        ) as string[]) || []
+    )
+  },
+  ['all-tags'],
+  { revalidate: 3600, tags: ['tags'] }
+)

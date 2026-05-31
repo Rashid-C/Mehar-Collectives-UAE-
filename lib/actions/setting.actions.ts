@@ -5,6 +5,11 @@ import Setting from '../db/models/setting.model'
 import { connectToDatabase } from '../db'
 import { formatError } from '../utils'
 import { requireAdmin } from '../auth-guard'
+import {
+  getFallbackSetting,
+  logDevDbFallback,
+  shouldUseDevDbFallback,
+} from '../db/dev-fallback'
 
 const globalForSettings = global as unknown as {
   cachedSettings: ISettingInput | null
@@ -19,32 +24,38 @@ export const getNoCachedSetting = async (): Promise<ISettingInput> => {
 
 export const getSetting = async (): Promise<ISettingInput> => {
   if (!globalForSettings.cachedSettings) {
-    await connectToDatabase()
-    const setting = await Setting.findOne().lean()
-    const parsed: ISettingInput = setting
-      ? JSON.parse(JSON.stringify(setting))
-      : data.settings[0]
+    let parsed: ISettingInput
 
-    // Auto-migrate: keep only AED, remove all other currencies, set as base
-    const hasOnlyAED =
-      parsed.availableCurrencies?.length === 1 &&
-      parsed.availableCurrencies[0].code === 'AED' &&
-      parsed.availableCurrencies[0].convertRate === 1
+    try {
+      await connectToDatabase()
+      const setting = await Setting.findOne().lean()
+      parsed = setting ? JSON.parse(JSON.stringify(setting)) : data.settings[0]
 
-    if (!hasOnlyAED) {
-      parsed.availableCurrencies = [
-        { name: 'UAE Dirham', code: 'AED', symbol: 'AED', convertRate: 1 },
-      ]
-      parsed.defaultCurrency = 'AED'
-      await Setting.findOneAndUpdate(
-        {},
-        {
-          $set: {
-            availableCurrencies: parsed.availableCurrencies,
-            defaultCurrency: 'AED',
-          },
-        }
-      )
+      // Auto-migrate: keep only AED, remove all other currencies, set as base
+      const hasOnlyAED =
+        parsed.availableCurrencies?.length === 1 &&
+        parsed.availableCurrencies[0].code === 'AED' &&
+        parsed.availableCurrencies[0].convertRate === 1
+
+      if (!hasOnlyAED) {
+        parsed.availableCurrencies = [
+          { name: 'UAE Dirham', code: 'AED', symbol: 'AED', convertRate: 1 },
+        ]
+        parsed.defaultCurrency = 'AED'
+        await Setting.findOneAndUpdate(
+          {},
+          {
+            $set: {
+              availableCurrencies: parsed.availableCurrencies,
+              defaultCurrency: 'AED',
+            },
+          }
+        )
+      }
+    } catch (error) {
+      if (!shouldUseDevDbFallback(error)) throw error
+      logDevDbFallback('getSetting', error)
+      parsed = getFallbackSetting()
     }
 
     globalForSettings.cachedSettings = parsed
