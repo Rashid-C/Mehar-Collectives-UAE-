@@ -2,10 +2,9 @@
 
 const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-import { unstable_cache, revalidateTag } from 'next/cache'
+import { unstable_cache, revalidatePath } from 'next/cache'
 import { connectToDatabase } from '@/lib/db'
 import Product, { IProduct } from '@/lib/db/models/product.model'
-import { revalidatePath } from 'next/cache'
 import { formatError } from '../utils'
 import { ProductInputSchema, ProductUpdateSchema } from '../validator'
 import { IProductInput } from '@/types'
@@ -27,8 +26,8 @@ export async function createProduct(data: IProductInput) {
     await connectToDatabase()
     await Product.create(product)
     revalidatePath('/admin/products')
-    revalidateTag('categories')
-    revalidateTag('tags')
+    revalidatePath('/')
+    revalidatePath('/search')
     return {
       success: true,
       message: 'Product created successfully',
@@ -48,8 +47,7 @@ export async function updateProduct(data: z.infer<typeof ProductUpdateSchema>) {
     revalidatePath('/admin/products')
     revalidatePath(`/product/${product.slug}`)
     revalidatePath('/search')
-    revalidateTag('categories')
-    revalidateTag('tags')
+    revalidatePath('/')
     return {
       success: true,
       message: 'Product updated successfully',
@@ -66,8 +64,8 @@ export async function deleteProduct(id: string) {
     const res = await Product.findByIdAndDelete(id)
     if (!res) throw new Error('Product not found')
     revalidatePath('/admin/products')
-    revalidateTag('categories')
-    revalidateTag('tags')
+    revalidatePath('/')
+    revalidatePath('/search')
     return {
       success: true,
       message: 'Product deleted successfully',
