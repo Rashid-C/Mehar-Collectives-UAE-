@@ -9,6 +9,8 @@ if (uri?.startsWith('mongodb+srv://')) {
       .filter(Boolean) ?? []
 
   dns.setServers(
-    configuredServers.length > 0 ? configuredServers : ['1.1.1.1', '8.8.8.8']
+    configuredServers.length > 0
+      ? configuredServers
+      : ['8.8.8.8', '8.8.4.4', '1.1.1.1', '1.0.0.1']
   )
 }

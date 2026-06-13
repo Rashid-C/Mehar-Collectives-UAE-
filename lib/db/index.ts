@@ -11,7 +11,12 @@ export const connectToDatabase = async (
         throw new Error(
             'Missing MONGODB_URI environment variable inside .env.local'
         )
-    cached.promise = cached.promise || mongoose.connect(MONGODB_URI, { maxPoolSize: 10 })
+    cached.promise = cached.promise || mongoose.connect(MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 10000,
+      connectTimeoutMS: 10000,
+      socketTimeoutMS: 30000,
+    })
     try {
         cached.conn = await cached.promise
     } catch (error) {
