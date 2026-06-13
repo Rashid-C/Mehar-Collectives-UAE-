@@ -68,14 +68,14 @@ function ProductList({
   const catsKey = products.map((p) => p.category).join(',')
   useEffect(() => {
     if (!idsKey) return
-    const fetchProducts = async () => {
+    const timer = setTimeout(async () => {
       const res = await fetch(
         `/api/products/browsing-history?type=${type}&excludeId=${excludeId}&categories=${catsKey}&ids=${idsKey}`
       )
       const data = await res.json()
       setData(data)
-    }
-    fetchProducts()
+    }, 80)
+    return () => clearTimeout(timer)
   }, [excludeId, idsKey, catsKey, type])
 
   return (
