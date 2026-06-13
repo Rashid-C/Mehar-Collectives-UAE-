@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Scissors, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Scissors, X, Lock, Unlock, Sparkles } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import {
   Sheet,
@@ -43,17 +42,17 @@ interface Props {
 
 export default function CustomizeDrawer({ productName, productSlug }: Props) {
   const [open, setOpen] = useState(false)
-
-  useEffect(() => {
-    document.body.classList.toggle('customize-open', open)
-    return () => { document.body.classList.remove('customize-open') }
-  }, [open])
   const [styleType, setStyleType] = useState<StyleType | null>(null)
   const [unit, setUnit] = useState<Unit>('cm')
   const [selectedSize, setSelectedSize] = useState<SizeRow | null>(null)
   const [measurements, setMeasurements] = useState<Record<MeasurementKey, string>>({
     length: '', sleeve: '', bust: '', hips: '',
   })
+
+  useEffect(() => {
+    document.body.classList.toggle('customize-open', open)
+    return () => { document.body.classList.remove('customize-open') }
+  }, [open])
 
   const applySize = (size: SizeRow, u: Unit = unit) => {
     setSelectedSize(size)
@@ -108,13 +107,6 @@ export default function CustomizeDrawer({ productName, productSlug }: Props) {
 
   const canSend = styleType !== null && selectedSize !== null
 
-  const sizeBtn = (active: boolean) =>
-    `border-2 text-sm font-semibold rounded-lg transition-all ${
-      active
-        ? 'border-violet-600 bg-violet-600 text-white shadow-sm'
-        : 'border-border text-foreground hover:border-violet-400 bg-background'
-    }`
-
   return (
     <>
       <style>{`
@@ -124,41 +116,80 @@ export default function CustomizeDrawer({ productName, productSlug }: Props) {
           transform: translateY(8px);
           transition: opacity 0.2s ease, transform 0.2s ease;
         }
+
+        @keyframes scissors-snip {
+          0%   { transform: rotate(0deg)   scale(1);    }
+          30%  { transform: rotate(-22deg) scale(1.15); }
+          60%  { transform: rotate(14deg)  scale(1.1);  }
+          100% { transform: rotate(0deg)   scale(1);    }
+        }
+        @keyframes border-dash-spin {
+          to { stroke-dashoffset: -48; }
+        }
+        @keyframes sparkle-pulse {
+          0%, 100% { opacity: 0.7; transform: scale(1);    }
+          50%       { opacity: 1;   transform: scale(1.18); }
+        }
+
+        .customize-trigger .snip-icon {
+          transition: transform 0.25s ease;
+        }
+        .customize-trigger:hover .snip-icon {
+          animation: scissors-snip 0.45s ease-in-out forwards;
+        }
+        .customize-trigger .sparkle-icon {
+          animation: sparkle-pulse 1.8s ease-in-out infinite;
+        }
+        .customize-trigger {
+          transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+        }
+        .customize-trigger:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+        }
+        .customize-trigger:active {
+          transform: translateY(0px) scale(0.98);
+        }
       `}</style>
 
-      {/* Trigger button */}
+      {/* ── Trigger button ── */}
       <button
         onClick={() => setOpen(true)}
-        className='w-full flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-violet-500 bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-950/60 font-semibold text-sm py-2.5 transition-all'
+        className='customize-trigger w-full flex items-center justify-center gap-2.5 rounded-2xl border-2 border-dotted border-foreground/50 bg-transparent text-foreground hover:bg-foreground hover:text-background hover:border-foreground font-semibold text-sm py-3 px-4'
       >
-        <Scissors className='size-4' />
-        Customize Your Dress
+        <Scissors className='snip-icon size-4 shrink-0' />
+        <span className='flex-1 text-center'>Customize Your Dress</span>
+        <Sparkles className='sparkle-icon size-3.5 shrink-0 opacity-70' />
       </button>
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side='right'
           showCloseButton={false}
-          className='p-0 flex flex-col w-full sm:max-w-[440px] gap-0 overflow-hidden'
+          className='p-0 flex flex-col w-full sm:max-w-110 gap-0 overflow-hidden'
         >
-          {/* ── Drawer header ── */}
-          <SheetHeader className='shrink-0 px-5 py-4 bg-gradient-to-r from-violet-700 to-violet-900'>
-            <div className='flex items-start justify-between gap-3'>
-              <div>
-                <SheetTitle className='text-white text-base font-bold flex items-center gap-2'>
-                  <Scissors className='size-4' />
-                  Customize Your Abaya
-                </SheetTitle>
-                <SheetDescription className='text-violet-200 text-xs mt-0.5 leading-tight line-clamp-2'>
-                  {productName}
-                </SheetDescription>
+          {/* ── Header ── */}
+          <SheetHeader className='shrink-0 px-5 py-4 border-b border-border bg-card'>
+            <div className='flex items-center justify-between gap-3'>
+              <div className='flex items-center gap-3'>
+                <div className='flex items-center justify-center w-9 h-9 rounded-xl bg-primary/15 shrink-0'>
+                  <Scissors className='size-4 text-primary-foreground' />
+                </div>
+                <div>
+                  <SheetTitle className='text-foreground text-base font-bold leading-tight'>
+                    Customize Your Abaya
+                  </SheetTitle>
+                  <SheetDescription className='text-muted-foreground text-xs mt-0.5 leading-tight line-clamp-1'>
+                    {productName}
+                  </SheetDescription>
+                </div>
               </div>
               <button
                 onClick={() => setOpen(false)}
-                className='mt-0.5 text-violet-200 hover:text-white transition-colors shrink-0'
+                className='text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0 rounded-full p-1.5'
                 aria-label='Close'
               >
-                <X className='size-5' />
+                <X className='size-4' />
               </button>
             </div>
           </SheetHeader>
@@ -172,19 +203,43 @@ export default function CustomizeDrawer({ productName, productSlug }: Props) {
                 Step 1 · Style Type
               </p>
               <div className='grid grid-cols-2 gap-3'>
-                {(['open', 'closed'] as StyleType[]).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setStyleType(t)}
-                    className={`py-3 rounded-xl border-2 text-sm font-semibold transition-all ${
-                      styleType === t
-                        ? 'border-violet-600 bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300'
-                        : 'border-border text-muted-foreground hover:border-violet-300 bg-background'
-                    }`}
-                  >
-                    {t === 'open' ? '🔓  Open Type' : '🔒  Closed Type'}
-                  </button>
-                ))}
+                {/* Open Type */}
+                <button
+                  onClick={() => setStyleType('open')}
+                  className={`group relative py-4 rounded-2xl border-2 text-sm font-semibold transition-all duration-200 flex flex-col items-center gap-2 ${
+                    styleType === 'open'
+                      ? 'border-primary bg-primary/10 text-primary-foreground shadow-sm'
+                      : 'border-border text-muted-foreground hover:border-primary/40 hover:bg-muted/50 bg-background'
+                  }`}
+                >
+                  <div className={`flex items-center justify-center w-9 h-9 rounded-full transition-colors ${
+                    styleType === 'open' ? 'bg-primary/20' : 'bg-muted group-hover:bg-primary/10'
+                  }`}>
+                    <Unlock className={`size-4 transition-colors ${
+                      styleType === 'open' ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-primary-foreground'
+                    }`} />
+                  </div>
+                  <span>Open Type</span>
+                </button>
+
+                {/* Closed Type */}
+                <button
+                  onClick={() => setStyleType('closed')}
+                  className={`group relative py-4 rounded-2xl border-2 text-sm font-semibold transition-all duration-200 flex flex-col items-center gap-2 ${
+                    styleType === 'closed'
+                      ? 'border-primary bg-primary/10 text-primary-foreground shadow-sm'
+                      : 'border-border text-muted-foreground hover:border-primary/40 hover:bg-muted/50 bg-background'
+                  }`}
+                >
+                  <div className={`flex items-center justify-center w-9 h-9 rounded-full transition-colors ${
+                    styleType === 'closed' ? 'bg-primary/20' : 'bg-muted group-hover:bg-primary/10'
+                  }`}>
+                    <Lock className={`size-4 transition-colors ${
+                      styleType === 'closed' ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-primary-foreground'
+                    }`} />
+                  </div>
+                  <span>Closed Type</span>
+                </button>
               </div>
             </section>
 
@@ -195,14 +250,14 @@ export default function CustomizeDrawer({ productName, productSlug }: Props) {
               <p className='text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2'>
                 Step 2 · Measurement Unit
               </p>
-              <div className='inline-flex rounded-lg overflow-hidden border border-border'>
+              <div className='inline-flex rounded-full overflow-hidden border border-border'>
                 {(['cm', 'inch'] as Unit[]).map((u) => (
                   <button
                     key={u}
                     onClick={() => handleUnitChange(u)}
-                    className={`px-6 py-2 text-sm font-medium transition-colors ${
+                    className={`px-6 py-2 text-sm font-semibold transition-all duration-200 ${
                       unit === u
-                        ? 'bg-violet-600 text-white'
+                        ? 'bg-primary text-primary-foreground'
                         : 'bg-background text-muted-foreground hover:bg-muted'
                     }`}
                   >
@@ -220,28 +275,34 @@ export default function CustomizeDrawer({ productName, productSlug }: Props) {
                 Step 3 · Select Size
               </p>
 
-              {/* By number */}
               <p className='text-xs text-muted-foreground mb-1.5'>By number</p>
               <div className='flex gap-2 flex-wrap mb-4'>
                 {SIZE_DATA.map((s) => (
                   <button
                     key={s.number}
                     onClick={() => applySize(s)}
-                    className={`w-11 h-11 rounded-lg ${sizeBtn(selectedSize?.number === s.number)}`}
+                    className={`w-11 h-11 rounded-xl border-2 text-sm font-semibold transition-all duration-150 ${
+                      selectedSize?.number === s.number
+                        ? 'border-primary bg-primary text-primary-foreground shadow-sm scale-105'
+                        : 'border-border text-foreground hover:border-primary/50 hover:scale-105 bg-background'
+                    }`}
                   >
                     {s.number}
                   </button>
                 ))}
               </div>
 
-              {/* By letter */}
               <p className='text-xs text-muted-foreground mb-1.5'>By letter</p>
               <div className='flex gap-2 flex-wrap'>
                 {SIZE_DATA.map((s) => (
                   <button
                     key={s.letter}
                     onClick={() => applySize(s)}
-                    className={`w-13 h-11 px-3 rounded-lg ${sizeBtn(selectedSize?.letter === s.letter)}`}
+                    className={`h-11 px-4 rounded-xl border-2 text-sm font-semibold transition-all duration-150 ${
+                      selectedSize?.letter === s.letter
+                        ? 'border-primary bg-primary text-primary-foreground shadow-sm scale-105'
+                        : 'border-border text-foreground hover:border-primary/50 hover:scale-105 bg-background'
+                    }`}
                   >
                     {s.letter}
                   </button>
@@ -258,7 +319,7 @@ export default function CustomizeDrawer({ productName, productSlug }: Props) {
                   Step 4 · Measurements ({unit})
                 </p>
                 {selectedSize && (
-                  <span className='text-xs bg-violet-100 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded-full font-medium'>
+                  <span className='text-xs bg-primary/15 text-primary-foreground px-2 py-0.5 rounded-full font-medium'>
                     Size {selectedSize.number} · {selectedSize.letter}
                   </span>
                 )}
@@ -279,7 +340,7 @@ export default function CustomizeDrawer({ productName, productSlug }: Props) {
                           setMeasurements((prev) => ({ ...prev, [key]: e.target.value }))
                         }
                         placeholder='—'
-                        className='w-full h-10 pl-3 pr-10 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-shadow'
+                        className='w-full h-10 pl-3 pr-10 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all duration-150'
                       />
                       <span className='absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none'>
                         {unit}
@@ -291,39 +352,36 @@ export default function CustomizeDrawer({ productName, productSlug }: Props) {
 
               {!selectedSize && (
                 <p className='text-xs text-center text-muted-foreground mt-2'>
-                  ↑ Select a size above to auto-fill all measurements
+                  Select a size above to auto-fill measurements
                 </p>
               )}
             </section>
           </div>
 
           {/* ── Fixed footer ── */}
-          <div className='shrink-0 border-t bg-background px-5 py-4 space-y-2'>
-            {/* Send to WhatsApp */}
+          <div className='shrink-0 border-t border-border bg-background px-5 py-4 space-y-2'>
             <button
               onClick={handleSend}
               disabled={!canSend}
-              className={`w-full h-11 rounded-lg flex items-center justify-center gap-2 font-semibold text-sm transition-all ${
+              className={`w-full h-11 rounded-full flex items-center justify-center gap-2 font-semibold text-sm transition-all duration-200 ${
                 canSend
-                  ? 'bg-[#25d366] hover:bg-[#1ebe5d] text-white shadow-sm'
+                  ? 'bg-[#25d366] hover:bg-[#1ebe5d] text-white shadow-sm hover:shadow-md hover:shadow-[#25d366]/30 hover:-translate-y-0.5'
                   : 'bg-muted text-muted-foreground cursor-not-allowed'
               }`}
             >
-              <svg viewBox='0 0 32 32' className='size-4 fill-current'>
+              <svg viewBox='0 0 32 32' className='size-4 fill-current shrink-0'>
                 <path d='M16.003 2.667C8.636 2.667 2.667 8.636 2.667 16c0 2.363.638 4.659 1.847 6.668L2.667 29.333l6.845-1.797A13.284 13.284 0 0 0 16.003 29.333C23.37 29.333 29.333 23.364 29.333 16c0-7.364-5.963-13.333-13.33-13.333zm0 2.444c6.007 0 10.889 4.882 10.889 10.889 0 6.007-4.882 10.889-10.889 10.889a10.849 10.849 0 0 1-5.61-1.567l-.403-.245-4.063 1.067 1.085-3.959-.267-.416A10.849 10.849 0 0 1 5.114 16c0-6.007 4.882-10.889 10.889-10.889zm-3.19 5.245c-.218 0-.574.081-.875.406-.3.325-1.143 1.116-1.143 2.722s1.169 3.156 1.333 3.374c.163.217 2.277 3.674 5.647 5.004 2.8 1.104 3.37.883 3.977.828.606-.054 1.956-.8 2.233-1.573.277-.772.277-1.434.194-1.572-.082-.135-.3-.217-.626-.38-.325-.162-1.956-.965-2.258-1.075-.3-.109-.519-.163-.738.163-.218.325-.845 1.075-1.034 1.292-.19.218-.381.245-.706.082-.326-.163-1.374-.507-2.619-1.616-.967-.862-1.62-1.928-1.81-2.253-.19-.326-.02-.502.142-.664.146-.146.325-.38.487-.57.163-.19.217-.326.326-.543.108-.218.054-.407-.028-.57-.081-.162-.727-1.782-1.006-2.436-.261-.625-.532-.535-.737-.544-.19-.008-.406-.01-.624-.01z' />
               </svg>
               Send Customization on WhatsApp
             </button>
 
-            {/* Clear */}
             <button
               onClick={handleClear}
-              className='w-full h-9 rounded-lg border border-border text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors'
+              className='w-full h-9 rounded-full border border-border text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150 font-medium'
             >
               Clear All
             </button>
 
-            {/* Helper hint */}
             {!canSend && (
               <p className='text-xs text-center text-muted-foreground'>
                 {!styleType && !selectedSize
