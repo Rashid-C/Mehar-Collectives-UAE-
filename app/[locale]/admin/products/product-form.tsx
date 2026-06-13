@@ -86,6 +86,7 @@ function TagInput({
   )
 }
 
+
 const productDefaultValues: IProductInput =
   process.env.NODE_ENV === 'development'
     ? {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { usePathname } from 'next/navigation'
 
 const WHATSAPP_NUMBER = '971589362677'
 const WHATSAPP_MESSAGE = 'Hello! I am interested in your products.'
@@ -13,7 +14,11 @@ interface WhatsAppButtonProps {
 export default function WhatsAppButton({
   message = WHATSAPP_MESSAGE,
 }: WhatsAppButtonProps) {
+  const pathname = usePathname()
   const [hovered, setHovered] = useState(false)
+
+  // Product page has its own "Ask on WhatsApp" button — hide the floating one there
+  if (pathname?.includes('/product/')) return null
 
   const encodedMessage = encodeURIComponent(message)
   const href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`

@@ -105,8 +105,8 @@ export async function updateUserName(user: IUserName) {
 export async function signInWithCredentials(user: IUserSignIn) {
   return await signIn('credentials', { ...user, redirect: false })
 }
-export const SignInWithGoogle = async () => {
-  await signIn('google')
+export const SignInWithGoogle = async (callbackUrl?: string) => {
+  await signIn('google', { redirectTo: callbackUrl || '/' })
 }
 export const SignOut = async () => {
   const redirectTo = await signOut({ redirect: false })

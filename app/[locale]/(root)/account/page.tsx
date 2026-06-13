@@ -61,6 +61,7 @@ export default function AccountPage() {
             </CardContent>
           </Link>
         </Card>
+
       </div>
       <BrowsingHistoryList className='mt-16' />
     </div>

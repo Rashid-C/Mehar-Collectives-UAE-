@@ -106,6 +106,7 @@ export default async function ProductDetails(props: {
                 color={color || product.colors[0]}
               />
             </div>
+
             <Separator className='my-2' />
             <div className='flex flex-col gap-2'>
               <p className='p-bold-20 text-grey-600'>

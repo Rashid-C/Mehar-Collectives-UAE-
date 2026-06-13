@@ -65,29 +65,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     jwt: async ({ token, user, trigger, session }) => {
       if (user) {
-        if (!user.name) {
-          await connectToDatabase()
-          await User.findByIdAndUpdate(user.id, {
-            name: user.name || user.email!.split('@')[0],
-            role: 'user',
-          })
-        }
-        token.name = user.name || user.email!.split('@')[0]
-        token.role = (user as { role?: string }).role || token.role || 'User'
+        // Fetch role and name from DB — works for both Google OAuth and Credentials
+        await connectToDatabase()
+        const dbUser = await User.findById(user.id).select('role name').lean()
+        token.role = dbUser?.role || 'User'
+        token.name = dbUser?.name || user.name || user.email!.split('@')[0]
       }
-
       if (session?.user?.name && trigger === 'update') {
         token.name = session.user.name
       }
       return token
     },
-    session: async ({ session, user, trigger, token }) => {
+    session: async ({ session, token }) => {
       session.user.id = token.sub as string
       session.user.role = (token.role as string) || 'User'
-      session.user.name = token.name
-      if (trigger === 'update') {
-        session.user.name = user.name
-      }
+      session.user.name = token.name as string
       return session
     },
   },

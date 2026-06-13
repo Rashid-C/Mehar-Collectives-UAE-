@@ -100,6 +100,7 @@ const CheckoutForm = () => {
     clearCart,
     setDeliveryDateIndex,
   } = useCartStore()
+
   const isMounted = useIsMounted()
   const isStorePickup = fulfillmentMethod === 'store-pickup'
 
@@ -818,6 +819,7 @@ const CheckoutForm = () => {
                         </div>
                       )}
                     </div>
+
                   </CardContent>
                 </Card>
               </>
