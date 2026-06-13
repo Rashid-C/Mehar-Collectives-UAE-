@@ -46,9 +46,10 @@ export default async function ProductDetails(props: {
 
   const { slug } = params
 
-  const session = await auth()
-
-  const product = await getProductBySlug(slug)
+  const [session, product] = await Promise.all([
+    auth(),
+    getProductBySlug(slug),
+  ])
 
   const relatedProducts = await getRelatedProductsByCategory({
     category: product.category,

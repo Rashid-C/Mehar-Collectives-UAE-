@@ -64,18 +64,19 @@ function ProductList({
 }) {
   const { products } = useBrowsingHistory()
   const [data, setData] = React.useState([])
+  const idsKey = products.map((p) => p.id).join(',')
+  const catsKey = products.map((p) => p.category).join(',')
   useEffect(() => {
+    if (!idsKey) return
     const fetchProducts = async () => {
       const res = await fetch(
-        `/api/products/browsing-history?type=${type}&excludeId=${excludeId}&categories=${products
-          .map((product) => product.category)
-          .join(',')}&ids=${products.map((product) => product.id).join(',')}`
+        `/api/products/browsing-history?type=${type}&excludeId=${excludeId}&categories=${catsKey}&ids=${idsKey}`
       )
       const data = await res.json()
       setData(data)
     }
     fetchProducts()
-    }, [excludeId, products, type])
+  }, [excludeId, idsKey, catsKey, type])
 
   return (
     data.length > 0 && (

@@ -2,7 +2,7 @@
 
 const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-import { unstable_cache, revalidatePath } from 'next/cache'
+import { unstable_cache, revalidatePath, revalidateTag } from 'next/cache'
 import { connectToDatabase } from '@/lib/db'
 import Product, { IProduct } from '@/lib/db/models/product.model'
 import { formatError } from '../utils'
@@ -25,6 +25,7 @@ export async function createProduct(data: IProductInput) {
     const product = ProductInputSchema.parse(data)
     await connectToDatabase()
     await Product.create(product)
+    revalidateTag('products')
     revalidatePath('/admin/products')
     revalidatePath('/')
     revalidatePath('/search')
@@ -44,6 +45,7 @@ export async function updateProduct(data: z.infer<typeof ProductUpdateSchema>) {
     const product = ProductUpdateSchema.parse(data)
     await connectToDatabase()
     await Product.findByIdAndUpdate(product._id, { $set: product })
+    revalidateTag('products')
     revalidatePath('/admin/products')
     revalidatePath(`/product/${product.slug}`)
     revalidatePath('/search')
@@ -63,6 +65,7 @@ export async function deleteProduct(id: string) {
     await connectToDatabase()
     const res = await Product.findByIdAndDelete(id)
     if (!res) throw new Error('Product not found')
+    revalidateTag('products')
     revalidatePath('/admin/products')
     revalidatePath('/')
     revalidatePath('/search')
@@ -309,11 +312,20 @@ export async function getProductsByTag({
 }
 
 // GET ONE PRODUCT BY SLUG
+const _getCachedProductBySlug = unstable_cache(
+  async (slug: string) => {
+    await connectToDatabase()
+    const product = await Product.findOne({ slug, isPublished: true }).lean()
+    return product ? (JSON.parse(JSON.stringify(product)) as IProduct) : null
+  },
+  ['product-by-slug'],
+  { revalidate: 60, tags: ['products'] }
+)
+
 export async function getProductBySlug(slug: string) {
-  await connectToDatabase()
-  const product = await Product.findOne({ slug, isPublished: true })
+  const product = await _getCachedProductBySlug(slug)
   if (!product) throw new Error('Product not found')
-  return JSON.parse(JSON.stringify(product)) as IProduct
+  return product
 }
 // GET RELATED PRODUCTS: PRODUCTS WITH SAME CATEGORY
 export async function getRelatedProductsByCategory({
