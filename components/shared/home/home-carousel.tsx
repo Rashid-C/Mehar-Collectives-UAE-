@@ -37,7 +37,7 @@ export function HomeCarousel({ items }: { items: ICarousel[] }) {
                   alt={item.title}
                   fill
                   className='object-cover'
-                  priority
+                  priority={index === 0}
                 />
                 <div className='absolute w-1/3 left-16 md:left-32 top-1/2 transform -translate-y-1/2'>
                   <h2

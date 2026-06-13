@@ -77,7 +77,7 @@ export async function deleteProduct(id: string) {
 // GET ONE PRODUCT BY ID
 export async function getProductById(productId: string) {
   await connectToDatabase()
-  const product = await Product.findById(productId)
+  const product = await Product.findById(productId).lean()
   return JSON.parse(JSON.stringify(product)) as IProduct
 }
 
@@ -295,6 +295,7 @@ export async function getProductsByTag({
     })
       .sort({ createdAt: 'desc' })
       .limit(limit)
+      .lean()
     return JSON.parse(JSON.stringify(products)) as IProduct[]
   } catch (error) {
     if (!shouldUseDevDbFallback(error)) throw error

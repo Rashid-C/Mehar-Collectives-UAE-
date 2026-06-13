@@ -125,15 +125,15 @@ export async function getReviews({
   limit = limit || pageSize
   await connectToDatabase()
   const skipAmount = (page - 1) * limit
-  const reviews = await Review.find({ product: productId })
-    .populate('user', 'name')
-    .sort({
-      createdAt: 'desc',
-    })
-    .skip(skipAmount)
-    .limit(limit)
-   
-  const reviewsCount = await Review.countDocuments({ product: productId })
+  const [reviews, reviewsCount] = await Promise.all([
+    Review.find({ product: productId })
+      .populate('user', 'name')
+      .sort({ createdAt: 'desc' })
+      .skip(skipAmount)
+      .limit(limit)
+      .lean(),
+    Review.countDocuments({ product: productId }),
+  ])
   return {
     data: JSON.parse(JSON.stringify(reviews)) as IReviewDetails[],
     totalPages: reviewsCount === 0 ? 1 : Math.ceil(reviewsCount / limit),

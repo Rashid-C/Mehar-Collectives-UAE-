@@ -23,14 +23,14 @@ export const GET = async (request: NextRequest) => {
       : { category: { $in: categories }, _id: { $nin: productIds }, isPublished: true }
 
   await connectToDatabase()
-  const products = await Product.find(filter)
-  if (listType === 'history')
-    return NextResponse.json(
-      products.sort(
-        (a, b) =>
-          productIds.indexOf(a._id.toString()) -
-          productIds.indexOf(b._id.toString())
-      )
+  const products = await Product.find(filter).lean()
+  if (listType === 'history') {
+    const sorted = [...products].sort(
+      (a, b) =>
+        productIds.indexOf(a._id.toString()) -
+        productIds.indexOf(b._id.toString())
     )
+    return NextResponse.json(sorted)
+  }
   return NextResponse.json(products)
 }

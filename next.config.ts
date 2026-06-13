@@ -13,7 +13,6 @@ const nextConfig: NextConfig = withNextIntl()({
     return [{ source: '/(.*)', headers: securityHeaders }]
   },
   images: {
-    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',

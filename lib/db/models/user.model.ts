@@ -26,6 +26,7 @@ const userSchema = new Schema<IUser>(
 )
 
 userSchema.index({ createdAt: -1 })
+userSchema.index({ resetPasswordToken: 1 })
 
 const User = (models.User as Model<IUser>) || model<IUser>('User', userSchema)
 

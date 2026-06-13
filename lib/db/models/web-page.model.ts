@@ -33,6 +33,8 @@ const webPageSchema = new Schema<IWebPage>(
     }
 )
 
+webPageSchema.index({ isPublished: 1 })
+
 const WebPage =
     (models.WebPage as Model<IWebPage>) ||
     model<IWebPage>('WebPage', webPageSchema)

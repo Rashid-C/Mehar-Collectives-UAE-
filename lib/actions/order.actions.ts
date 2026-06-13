@@ -296,8 +296,8 @@ export async function getOrderById(orderId: string): Promise<IOrder> {
   await connectToDatabase()
   const order =
     session.user.role === 'Admin'
-      ? await Order.findById(orderId)
-      : await Order.findOne({ _id: orderId, user: session.user.id })
+      ? await Order.findById(orderId).lean()
+      : await Order.findOne({ _id: orderId, user: session.user.id }).lean()
   return JSON.parse(JSON.stringify(order))
 }
 
