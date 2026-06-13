@@ -11,8 +11,8 @@ export default function ProductGallery({ images }: { images: string[] }) {
     const [selectedImage, setSelectedImage] = useState(0)
     const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set())
     const galleryImages =
-        images && images.filter(Boolean).length > 0
-          ? images.filter((img) => img && !brokenImages.has(img))
+        images && images.filter((img) => img && img.trim()).length > 0
+          ? images.filter((img) => img && img.trim() && !brokenImages.has(img))
           : [FALLBACK]
     const displayImages = galleryImages.length > 0 ? galleryImages : [FALLBACK]
     const safeSelected = Math.min(selectedImage, displayImages.length - 1)
@@ -46,7 +46,7 @@ export default function ProductGallery({ images }: { images: string[] }) {
                 <Zoom>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                        src={displayImages[safeSelected] ?? FALLBACK}
+                        src={displayImages[safeSelected] || FALLBACK}
                         alt='product image'
                         className='h-125 w-full object-contain'
                         onError={(e) => {
