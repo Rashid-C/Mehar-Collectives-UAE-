@@ -187,7 +187,7 @@ export default function AiChatWidget() {
   }
 
   return (
-    <div className='fixed right-3 bottom-3 z-[10000] sm:right-4 sm:bottom-4'>
+    <div id='ai-chat-widget' className='fixed right-3 bottom-3 z-[10000] sm:right-4 sm:bottom-4'>
       {isOpen ? (
         <div className='relative flex h-[min(76vh,40rem)] w-[min(calc(100vw-1rem),24rem)] flex-col overflow-hidden rounded-[1.6rem] border border-slate-200/80 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.2)] ring-1 ring-slate-950/5 backdrop-blur sm:w-[24rem]'>
           <div className='pointer-events-none absolute inset-x-0 top-0 h-20 bg-[radial-gradient(circle_at_top,#7dd3fc_0%,rgba(125,211,252,0.2)_28%,transparent_70%)] opacity-80' />

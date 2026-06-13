@@ -13,6 +13,7 @@ import ProductPrice from '@/components/shared/product/product-price'
 import ProductGallery from '@/components/shared/product/product-gallery'
 import AddToBrowsingHistory from '@/components/shared/product/add-to-browsing-history'
 import ProductWhatsAppButton from '@/components/shared/product/product-whatsapp-button'
+import CustomizeDrawer from '@/components/shared/product/customize-drawer'
 import { Separator } from '@/components/ui/separator'
 import BrowsingHistoryList from '@/components/shared/browsing-history-list'
 import RatingSummary from '@/components/shared/product/rating-summary'
@@ -107,6 +108,8 @@ export default async function ProductDetails(props: {
                 color={color || product.colors[0]}
               />
             </div>
+
+            <CustomizeDrawer productName={product.name} productSlug={product.slug} />
 
             <Separator className='my-2' />
             <div className='flex flex-col gap-2'>
