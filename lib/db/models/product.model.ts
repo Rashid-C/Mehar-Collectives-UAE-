@@ -103,6 +103,7 @@ productSchema.index({ isPublished: 1, category: 1, tags: 1 })
 productSchema.index({ isPublished: 1, price: 1 })
 productSchema.index({ isPublished: 1, avgRating: -1 })
 productSchema.index({ isPublished: 1, numSales: -1 })
+productSchema.index({ isPublished: 1, category: 1, numSales: -1 })
 productSchema.index({ isPublished: 1, createdAt: -1 })
 productSchema.index({ name: 'text' })
 

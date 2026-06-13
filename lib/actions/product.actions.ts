@@ -328,6 +328,24 @@ export async function getProductBySlug(slug: string) {
   return product
 }
 // GET RELATED PRODUCTS: PRODUCTS WITH SAME CATEGORY
+const _getCachedRelatedProducts = unstable_cache(
+  async (category: string, productId: string, page: number, limit: number) => {
+    await connectToDatabase()
+    const skipAmount = (page - 1) * limit
+    const conditions = { isPublished: true, category, _id: { $ne: productId } }
+    const [products, productsCount] = await Promise.all([
+      Product.find(conditions).sort({ numSales: 'desc' }).skip(skipAmount).limit(limit).lean(),
+      Product.countDocuments(conditions),
+    ])
+    return {
+      data: JSON.parse(JSON.stringify(products)) as IProduct[],
+      totalPages: Math.ceil(productsCount / limit),
+    }
+  },
+  ['related-products'],
+  { revalidate: 300, tags: ['products'] }
+)
+
 export async function getRelatedProductsByCategory({
   category,
   productId,
@@ -339,25 +357,9 @@ export async function getRelatedProductsByCategory({
   limit?: number
   page: number
 }) {
-  const {
-    common: { pageSize },
-  } = await getSetting()
+  const { common: { pageSize } } = await getSetting()
   limit = limit || pageSize
-  await connectToDatabase()
-  const skipAmount = (Number(page) - 1) * limit
-  const conditions = {
-    isPublished: true,
-    category,
-    _id: { $ne: productId },
-  }
-  const [products, productsCount] = await Promise.all([
-    Product.find(conditions).sort({ numSales: 'desc' }).skip(skipAmount).limit(limit).lean(),
-    Product.countDocuments(conditions),
-  ])
-  return {
-    data: JSON.parse(JSON.stringify(products)) as IProduct[],
-    totalPages: Math.ceil(productsCount / limit),
-  }
+  return _getCachedRelatedProducts(category, productId, Number(page), limit)
 }
 
 // GET ALL PRODUCTS
