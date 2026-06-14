@@ -71,7 +71,7 @@ export default function AddToCart({
   return minimal ? (
     <Button
       size='sm'
-      className='rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1.5'
+      className='rounded-full bg-zinc-900 hover:bg-zinc-800 text-white font-semibold tracking-wide gap-1.5 transition-all duration-200 hover:shadow-md active:scale-[0.98]'
       onClick={() => {
         try {
           addItem(item, 1)
@@ -121,7 +121,7 @@ export default function AddToCart({
 
         <Button
           size='lg'
-          className='rounded-full w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-2'
+          className='rounded-full w-full bg-zinc-900 hover:bg-zinc-800 text-white font-semibold tracking-wide gap-2 transition-all duration-200 hover:shadow-lg hover:shadow-zinc-900/20 active:scale-[0.98]'
           type='button'
           onClick={async () => {
             try {
@@ -142,7 +142,7 @@ export default function AddToCart({
         <Button
           size='lg'
           onClick={handleBuyNow}
-          className='w-full rounded-full bg-amber-500 hover:bg-amber-600 text-black font-semibold gap-2'
+          className='w-full rounded-full bg-linear-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-zinc-900 font-bold tracking-wide gap-2 transition-all duration-200 hover:shadow-lg hover:shadow-amber-400/40 hover:scale-[1.01] active:scale-[0.98]'
         >
           <Zap className='h-5 w-5' />
           {t('Product.Buy Now')}
@@ -223,7 +223,7 @@ export default function AddToCart({
 
           <Button
             onClick={handleConfirmFulfillment}
-            className='w-full rounded-full bg-amber-500 hover:bg-amber-600 text-black font-semibold mt-2'
+            className='w-full rounded-full bg-linear-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-zinc-900 font-bold tracking-wide transition-all duration-200 hover:shadow-lg hover:shadow-amber-400/40 active:scale-[0.98] mt-2'
           >
             Continue to Checkout
           </Button>
